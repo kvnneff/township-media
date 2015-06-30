@@ -1,4 +1,7 @@
-require('dotenv').load()
+try {
+  require('dotenv').load()
+} catch (err) {}
+
 var exec = require('child_process').exec
 var fs = require('fs')
 var mkdirp = require('mkdirp')
