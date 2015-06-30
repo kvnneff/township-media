@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/staygrimm/township-media",
   "devDependencies": {
+    "dotenv": "^1.2.0",
     "form-data": "^1.0.0-rc1",
     "levelup": "^1.2.1",
     "memdown": "^1.0.0",
@@ -33,6 +34,7 @@
     "inherits": "^2.0.1",
     "level-model": "^1.2.3",
     "match-routes": "^1.1.1",
-    "response": "^0.14.0"
+    "response": "^0.14.0",
+    "s3-blob-store": "0.0.5"
   }
 }
