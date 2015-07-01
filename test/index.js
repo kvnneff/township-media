@@ -7,7 +7,6 @@ var fs = require('fs')
 var mkdirp = require('mkdirp')
 var request = require('request')
 var test = require('tape')
-var FormData = require('form-data')
 var memdown = require('memdown')
 var township = require('township')
 var levelup = require('levelup')
@@ -19,15 +18,22 @@ var serverURI = 'http://127.0.0.1:4243/api/v1/media'
 var uploadDir = __dirname + '/media_uploads'
 var server
 
+function getRequestParams () {
+  return {
+    url: serverURI,
+    formData: {
+      attachments: [fs.createReadStream(__dirname + '/fixtures/file_1.png')]
+    }
+  }
+}
+
 /**
  * Create a new server instance and upload directory
  */
 function before (pluginOptions) {
   pluginOptions = pluginOptions || {}
   server = township(db, {apps: [app(db, pluginOptions)]})
-
   server.listen()
-
   mkdirp(uploadDir)
 }
 
@@ -39,68 +45,55 @@ function after () {
   exec('rm -rf ' + uploadDir, function (err) {if (err) throw err})
 }
 
+// function sendForm (cb) {
+
+// }
+
 /**
  * Tests
  */
 test('upload a file to disk storage', function (t) {
-  t.plan(3)
+  t.plan(4)
   before({uploadDir: uploadDir})
-  var form = new FormData()
-  var response = ''
-  form.append('foo', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.submit(serverURI, function (err, res) {
-    t.equal(err, null)
-    t.ok(res)
-    res.on('data', function (chunk) {
-      response += chunk
-    })
-    res.on('end', function () {
-      var file = JSON.parse(response)[0]
-      t.equal(file.name, 'test.png')
-      after()
-    })
+  request.post(getRequestParams(), function (err, res, body) {
+    t.equal(err, null, 'error is equal to null')
+    t.ok(res, 'response is truthy')
+    t.ok(body, 'body is truthy')
+    var file = JSON.parse(body)[0]
+    t.equal(file.name, 'file_1.png', 'file.name is equal to file_1.png')
+    after()
   })
 })
 
 test('upload multiple files to disk storage', function (t) {
-  t.plan(4)
+  t.plan(5)
   before({uploadDir: uploadDir})
-  var form = new FormData()
-  var expected = [{name: 'test.png'}, {name: 'test.png'}]
-  var response = ''
-  form.append('foo', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.append('bar', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.submit(serverURI, function (err, res) {
-    t.equal(err, null)
-    t.ok(res)
-    res.on('data', function (chunk) {
-      response += chunk
-    })
-    res.on('end', function () {
-      var files = JSON.parse(response)
-      for (var i = files.length; i--;) {
-        t.equal(files[i].name, expected[i].name)
-      }
-
-      after()
-    })
+  var expected = [{name: 'file_1.png'}, {name: 'file_2.png'}]
+  var params = getRequestParams()
+  params.formData.attachments.push(fs.createReadStream(__dirname + '/fixtures/file_2.png'))
+  request.post(params, function (err, res, body) {
+    t.equal(err, null, 'error is equal to null')
+    t.ok(res, 'response is truthy')
+    t.ok(body, 'body is truthy')
+    var files = JSON.parse(body)
+    for (var i = files.length; i--;) {
+      t.equal(files[i].name, expected[i].name, 'file.name is equal to expected.name')
+    }
+    after()
   })
 })
 
 test('get a list of media resources', function (t) {
-  t.plan(5)
+  t.plan(4)
   before({uploadDir: uploadDir})
-  var form = new FormData()
-
-  form.append('foo', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.submit(serverURI, function (err, res) {
-    t.equal(err, null)
-    t.ok(res)
-    request(serverURI, function (error, response, body) {
-      t.equal(error, null)
-      t.ok(response)
+  request(serverURI, function (err) {
+    if (err) throw err
+    request(getRequestParams(), function (err, res, body) {
+      t.equal(err, null, 'error is equal to null')
+      t.ok(res, 'response is truthy')
+      t.ok(body, 'body is truthy')
       body = JSON.parse(body)
-      t.equal(body[0].value.name, 'test.png')
+      t.equal(body[0].value.name, 'file_1.png', 'body[0].value.name is equal to file_1.png')
       after()
     })
   })
@@ -108,70 +101,47 @@ test('get a list of media resources', function (t) {
 
 test('get a single media resource', function (t) {
   before({uploadDir: uploadDir})
-  var form = new FormData()
-  var response = ''
-  form.append('foo', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.submit(serverURI, function (err, res) {
+  request(serverURI, function (err, res, body) {
     if (err) throw err
-    res.on('data', function (chunk) {
-      response += chunk
-    })
-    res.on('end', function () {
-      var file = JSON.parse(response)[0]
-      request(serverURI + '/' + file.key, function (error, response, body) {
-        t.equal(error, null, 'error is null')
-        t.ok(response, 'response is truthy')
-        t.equal(JSON.parse(body).name, 'test.png')
-        after()
-        t.end()
-      })
+    var file = JSON.parse(body)[0]
+    request(serverURI + '/' + file.key, function (err, response, body) {
+      t.equal(err, null, 'err is null')
+      t.ok(response, 'response is truthy')
+      t.equal(JSON.parse(body).name, 'file_1.png')
+      after()
+      t.end()
     })
   })
 })
 
 test('upload a file to s3', function (t) {
-  t.plan(3)
+  t.plan(4)
   before({
     accessKeyId: process.env.S3_ACCESS_KEY,
     secretAccessKey: process.env.S3_SECRET_KEY,
     bucket: process.env.S3_BUCKET
   })
-  var form = new FormData()
-  var response = ''
-  form.append('foo', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.submit(serverURI, function (err, res) {
-    t.equal(err, null)
-    t.ok(res)
-    res.on('data', function (chunk) {
-      response += chunk
-    })
-    res.on('end', function () {
-      var file = JSON.parse(response)[0]
-      t.equal(file.name, 'test.png')
-      after()
-    })
+  request.post(getRequestParams(), function (err, res, body) {
+    t.equal(err, null, 'error is null')
+    t.ok(res, 'response is truthy')
+    t.ok(body, 'body is truthy')
+    var file = JSON.parse(body)[0]
+    t.equal(file.name, 'file_1.png')
+    after()
   })
 })
 
 test('delete a file from disk storage', function (t) {
+  t.plan(3)
   before({uploadDir: uploadDir})
-  var form = new FormData()
-  var response = ''
-  form.append('foo', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.submit(serverURI, function (err, res) {
+  request.post(getRequestParams(), function (err, res, body) {
     if (err) throw err
-    res.on('data', function (chunk) {
-      response += chunk
-    })
-    res.on('end', function () {
-      var file = JSON.parse(response)[0]
-      request.del(serverURI + '/' + file.key, function (error, response, body) {
-        t.equal(error, null, 'error is null')
-        t.ok(response, 'response is truthy')
-        t.equal(response.statusCode, 204, 'response.statusCode is 204')
-        after()
-        t.end()
-      })
+    var file = JSON.parse(body)[0]
+    request.del(serverURI + '/' + file.key, function (err, res, body) {
+      t.equal(err, null, 'err is null')
+      t.ok(res, 'response is truthy')
+      t.equal(res.statusCode, 204, 'statusCode is 204')
+      after()
     })
   })
 })
@@ -182,23 +152,15 @@ test('delete a file from s3', function (t) {
     secretAccessKey: process.env.S3_SECRET_KEY,
     bucket: process.env.S3_BUCKET
   })
-  var form = new FormData()
-  var response = ''
-  form.append('foo', fs.createReadStream(__dirname + '/fixtures/test.png'))
-  form.submit(serverURI, function (err, res) {
+  request.post(getRequestParams(), function (err, res, body) {
     if (err) throw err
-    res.on('data', function (chunk) {
-      response += chunk
-    })
-    res.on('end', function () {
-      var file = JSON.parse(response)[0]
-      request.del(serverURI + '/' + file.key, function (error, response, body) {
-        t.equal(error, null, 'error is null')
-        t.ok(response, 'response is truthy')
-        t.equal(response.statusCode, 204, 'response.statusCode is 204')
-        after()
-        t.end()
-      })
+    var file = JSON.parse(body)[0]
+    request.del(serverURI + '/' + file.key, function (err, response, body) {
+      t.equal(err, null, 'err is null')
+      t.ok(response, 'response is truthy')
+      t.equal(response.statusCode, 204, 'statusCode is 204')
+      after()
+      t.end()
     })
   })
 })
@@ -207,7 +169,7 @@ test('teardown media', function (t) {
   media.createReadStream()
     .on('data', function (data) {
       media.delete(data.key, function (err) {
-        t.notOk(err, 'no error deleting model')
+        t.notOk(err, 'model deleted')
       })
     })
     .on('end', function () {
