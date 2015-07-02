@@ -13,10 +13,34 @@ var levelup = require('levelup')
 var db = levelup('db', {db: memdown})
 var app = require('../')
 var media = require('../lib/model')(db)
-
-var serverURI = 'http://127.0.0.1:4243/api/v1/media'
-var uploadDir = __dirname + '/media_uploads'
 var server
+
+var staticFileDir = process.cwd() + '/assets'
+var serverURI = 'http://127.0.0.1:4243/api/v1/media'
+var s3Options = {
+  accessKeyId: process.env.S3_ACCESS_KEY,
+  secretAccessKey: process.env.S3_SECRET_KEY,
+  bucket: process.env.S3_BUCKET
+}
+
+/**
+ * Create a new server instance and upload directory
+ */
+var test = beforeEach(test, function before (assert) {
+  server = township(db, {staticFileDir: staticFileDir})
+  server.add(app(db, {staticFileDir: staticFileDir}, server))
+  server.listen()
+  mkdirp(staticFileDir)
+  assert.end()
+})
+
+test = afterEach(test, function after (assert) {
+  server._server.close()
+  exec('rm -rf ' + staticFileDir, function (err) {
+    if (err) throw err
+    assert.end()
+  })
+})
 
 function getRequestParams () {
   return {
@@ -28,152 +52,178 @@ function getRequestParams () {
 }
 
 /**
- * Create a new server instance and upload directory
- */
-function before (pluginOptions) {
-  pluginOptions = pluginOptions || {}
-  server = township(db, {apps: [app(db, pluginOptions)]})
-  server.listen()
-  mkdirp(uploadDir)
-}
-
-/**
- * Close the server and clean up generated files
- */
-function after () {
-  server._server.close()
-  exec('rm -rf ' + uploadDir, function (err) {if (err) throw err})
-}
-
-// function sendForm (cb) {
-
-// }
-
-/**
  * Tests
  */
-test('upload a file to disk storage', function (t) {
-  t.plan(4)
-  before({uploadDir: uploadDir})
+test('upload a file to disk storage', function (assert) {
   request.post(getRequestParams(), function (err, res, body) {
-    t.equal(err, null, 'error is equal to null')
-    t.ok(res, 'response is truthy')
-    t.ok(body, 'body is truthy')
+    assert.equal(err, null, 'error is equal to null')
+    assert.ok(res, 'response is truthy')
+    assert.ok(body, 'body is truthy')
     var file = JSON.parse(body)[0]
-    t.equal(file.name, 'file_1.png', 'file.name is equal to file_1.png')
-    after()
+    assert.equal(file.name, 'file_1.png', 'file.name is equal to file_1.png')
+    assert.end()
   })
 })
 
-test('upload multiple files to disk storage', function (t) {
-  t.plan(5)
-  before({uploadDir: uploadDir})
+test('upload multiple files to disk storage', function (assert) {
   var expected = [{name: 'file_1.png'}, {name: 'file_2.png'}]
   var params = getRequestParams()
   params.formData.attachments.push(fs.createReadStream(__dirname + '/fixtures/file_2.png'))
   request.post(params, function (err, res, body) {
-    t.equal(err, null, 'error is equal to null')
-    t.ok(res, 'response is truthy')
-    t.ok(body, 'body is truthy')
+    assert.equal(err, null, 'error is equal to null')
+    assert.ok(res, 'response is truthy')
+    assert.ok(body, 'body is truthy')
     var files = JSON.parse(body)
     for (var i = files.length; i--;) {
-      t.equal(files[i].name, expected[i].name, 'file.name is equal to expected.name')
+      assert.equal(files[i].name, expected[i].name, 'file.name is equal to expected.name')
     }
-    after()
+    assert.end()
   })
 })
 
-test('get a list of media resources', function (t) {
-  t.plan(4)
-  before({uploadDir: uploadDir})
+test('upload a file to s3', function (assert) {
+  server.remove('media')
+  server.add(app, s3Options, server)
+  request.post(getRequestParams(), function (err, res, body) {
+    assert.equal(err, null, 'error is null')
+    assert.ok(res, 'response is truthy')
+    assert.ok(body, 'body is truthy')
+    var file = JSON.parse(body)[0]
+    assert.equal(file.name, 'file_1.png')
+    assert.end()
+  })
+})
+
+test('get a list of media resources', function (assert) {
   request(serverURI, function (err) {
     if (err) throw err
     request(getRequestParams(), function (err, res, body) {
-      t.equal(err, null, 'error is equal to null')
-      t.ok(res, 'response is truthy')
-      t.ok(body, 'body is truthy')
+      assert.equal(err, null, 'error is equal to null')
+      assert.ok(res, 'response is truthy')
+      assert.ok(body, 'body is truthy')
       body = JSON.parse(body)
-      t.equal(body[0].value.name, 'file_1.png', 'body[0].value.name is equal to file_1.png')
-      after()
+      assert.equal(body[0].value.name, 'file_1.png', 'body[0].value.name is equal to file_1.png')
+      assert.end()
     })
   })
 })
 
-test('get a single media resource', function (t) {
-  before({uploadDir: uploadDir})
+test('get a single media resource', function (assert) {
   request(serverURI, function (err, res, body) {
     if (err) throw err
     var file = JSON.parse(body)[0]
     request(serverURI + '/' + file.key, function (err, response, body) {
-      t.equal(err, null, 'err is null')
-      t.ok(response, 'response is truthy')
-      t.equal(JSON.parse(body).name, 'file_1.png')
-      after()
-      t.end()
+      assert.equal(err, null, 'err is null')
+      assert.ok(response, 'response is truthy')
+      assert.equal(JSON.parse(body).name, 'file_1.png')
+      assert.end()
     })
   })
 })
 
-test('upload a file to s3', function (t) {
-  t.plan(4)
-  before({
-    accessKeyId: process.env.S3_ACCESS_KEY,
-    secretAccessKey: process.env.S3_SECRET_KEY,
-    bucket: process.env.S3_BUCKET
-  })
+test('update a media resource on disk storage', function (assert) {
   request.post(getRequestParams(), function (err, res, body) {
-    t.equal(err, null, 'error is null')
-    t.ok(res, 'response is truthy')
-    t.ok(body, 'body is truthy')
+    if (err) throw err
     var file = JSON.parse(body)[0]
-    t.equal(file.name, 'file_1.png')
-    after()
+    var params = {
+      url: serverURI + '/' + file.key,
+      body: {'name': 'file_3.png'},
+      json: true
+    }
+    request.put(params, function (err, res, body) {
+      assert.equal(err, null, 'err is null')
+      assert.ok(res, 'response is truthy')
+      assert.equal(body.name, 'file_3.png')
+      assert.end()
+    })
   })
 })
 
-test('delete a file from disk storage', function (t) {
-  t.plan(3)
-  before({uploadDir: uploadDir})
+test('update a media resource on s3', function (assert) {
+  server.remove('media')
+  server.add(app, s3Options, server)
+  request.post(getRequestParams(), function (err, res, body) {
+    if (err) throw err
+    var file = JSON.parse(body)[0]
+    var params = {
+      url: serverURI + '/' + file.key,
+      body: {'name': 'file_3.png'},
+      json: true
+    }
+    request.put(params, function (err, res, body) {
+      assert.equal(err, null, 'err is null')
+      assert.ok(res, 'response is truthy')
+      assert.equal(body.name, 'file_3.png')
+      assert.end()
+    })
+  })
+})
+
+test('delete a file from disk storage', function (assert) {
   request.post(getRequestParams(), function (err, res, body) {
     if (err) throw err
     var file = JSON.parse(body)[0]
     request.del(serverURI + '/' + file.key, function (err, res, body) {
-      t.equal(err, null, 'err is null')
-      t.ok(res, 'response is truthy')
-      t.equal(res.statusCode, 204, 'statusCode is 204')
-      after()
+      assert.equal(err, null, 'err is null')
+      assert.ok(res, 'response is truthy')
+      assert.equal(res.statusCode, 204, 'statusCode is 204')
+      assert.end()
     })
   })
 })
 
-test('delete a file from s3', function (t) {
-  before({
-    accessKeyId: process.env.S3_ACCESS_KEY,
-    secretAccessKey: process.env.S3_SECRET_KEY,
-    bucket: process.env.S3_BUCKET
-  })
+test('delete a file from s3', function (assert) {
+  server.remove('media')
+  server.add(app, s3Options, server)
   request.post(getRequestParams(), function (err, res, body) {
     if (err) throw err
     var file = JSON.parse(body)[0]
     request.del(serverURI + '/' + file.key, function (err, response, body) {
-      t.equal(err, null, 'err is null')
-      t.ok(response, 'response is truthy')
-      t.equal(response.statusCode, 204, 'statusCode is 204')
-      after()
-      t.end()
+      assert.equal(err, null, 'err is null')
+      assert.ok(response, 'response is truthy')
+      assert.equal(response.statusCode, 204, 'statusCode is 204')
+      assert.end()
     })
   })
 })
 
-test('teardown media', function (t) {
+test('teardown media', function (assert) {
   media.createReadStream()
     .on('data', function (data) {
       media.delete(data.key, function (err) {
-        t.notOk(err, 'model deleted')
+        assert.notOk(err, 'model deleted')
       })
     })
     .on('end', function () {
       db.close()
-      t.end()
+      assert.end()
     })
 })
+
+function beforeEach (test, handler) {
+  return function tapish (name, listener) {
+    test(name, function (assert) {
+      var _end = assert.end
+      assert.end = function () {
+        assert.end = _end
+        listener(assert)
+      }
+
+      handler(assert)
+    })
+  }
+}
+
+function afterEach (test, handler) {
+  return function tapish (name, listener) {
+    test(name, function (assert) {
+      var _end = assert.end
+      assert.end = function () {
+        assert.end = _end
+        handler(assert)
+      }
+
+      listener(assert)
+    })
+  }
+}
