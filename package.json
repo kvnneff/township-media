@@ -27,7 +27,7 @@
     "standard": "^4.4.1",
     "tap-spec": "^4.0.2",
     "tape": "^4.0.0",
-    "township": "git://github.com/staygrimm/township.git"
+    "township": "git://github.com/civicmakerlab/township.git"
   },
   "dependencies": {
     "JSONStream": "^1.0.4",
