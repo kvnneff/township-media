@@ -12,7 +12,7 @@ var township = require('township')
 var levelup = require('levelup')
 var db = levelup('db', {db: memdown})
 var app = require('../')
-var media = require('../lib/model')(db)
+var media = require('../lib/model')({db: db})
 var server
 
 var staticFileDir = process.cwd() + '/assets'
@@ -27,8 +27,8 @@ var s3Options = {
  * Create a new server instance and upload directory
  */
 var test = beforeEach(test, function before (assert) {
-  server = township(db, {staticFileDir: staticFileDir})
-  server.add(app(db, {staticFileDir: staticFileDir}, server))
+  server = township(db)
+  server.add(app({staticFileDir: staticFileDir}))
   server.listen()
   mkdirp(staticFileDir)
   assert.end()
@@ -83,7 +83,7 @@ test('upload multiple files to disk storage', function (assert) {
 
 test('upload a file to s3', function (assert) {
   server.remove('media')
-  server.add(app, s3Options, server)
+  server.add(app(s3Options))
   request.post(getRequestParams(), function (err, res, body) {
     assert.equal(err, null, 'error is null')
     assert.ok(res, 'response is truthy')
@@ -141,7 +141,7 @@ test('update a media resource on disk storage', function (assert) {
 
 test('update a media resource on s3', function (assert) {
   server.remove('media')
-  server.add(app, s3Options, server)
+  server.add(app(s3Options))
   request.post(getRequestParams(), function (err, res, body) {
     if (err) throw err
     var file = JSON.parse(body)[0]
@@ -174,7 +174,7 @@ test('delete a file from disk storage', function (assert) {
 
 test('delete a file from s3', function (assert) {
   server.remove('media')
-  server.add(app, s3Options, server)
+  server.add(app(s3Options))
   request.post(getRequestParams(), function (err, res, body) {
     if (err) throw err
     var file = JSON.parse(body)[0]
