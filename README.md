@@ -1,5 +1,5 @@
 # township-media
-![<img src="https://travis-ci.org/staygrimm/township-media.svg">](https://travis-ci.org/staygrimm/township-media)
+[![alt text](https://travis-ci.org/staygrimm/township-media.svg)](https://travis-ci.org/staygrimm/township-media)
 
 A [Township](https://github.com/civicmakerlab/township) plugin that adds routes and methods for managing media uploads.  Includes support for Amazon S3.
 
