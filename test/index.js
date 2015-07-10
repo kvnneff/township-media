@@ -26,7 +26,7 @@ var s3Options = {
 /**
  * Create a new server instance and upload directory
  */
-var test = beforeEach(test, function before (assert) {
+test = beforeEach(test, function before (assert) {
   server = township(db)
   server.add(app({staticFileDir: staticFileDir}))
   server.listen()
