@@ -10,7 +10,7 @@ Media.prototype.get = function (key, options, cb) {
 }
 
 Media.prototype.list = function (options, cb) {
-  return this.client.request('get', 'media', options, cb)
+  return this.client.upload('get', 'media', options, cb)
 }
 
 Media.prototype.create = function (options, cb) {
