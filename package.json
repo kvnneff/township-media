@@ -35,7 +35,6 @@
     "body": "^5.1.0",
     "busboy": "^0.2.9",
     "extend": "^2.0.1",
-    "formidable": "^1.0.17",
     "fs-blob-store": "^5.1.1",
     "inherits": "^2.0.1",
     "level-model": "^1.2.3",
