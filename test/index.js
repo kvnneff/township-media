@@ -20,7 +20,8 @@ var serverURI = 'http://127.0.0.1:4243/api/v1/media'
 var s3Options = {
   accessKeyId: process.env.S3_ACCESS_KEY,
   secretAccessKey: process.env.S3_SECRET_KEY,
-  bucket: process.env.S3_BUCKET
+  bucket: process.env.S3_BUCKET,
+  bucketLocation: process.env.S3_BUCKET_LOCATION
 }
 
 /**
