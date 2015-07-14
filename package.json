@@ -1,6 +1,6 @@
 {
   "name": "township-media",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A plugin for Township that adds media upload capabilities",
   "main": "index.js",
   "scripts": {
