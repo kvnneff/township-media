@@ -21,7 +21,8 @@ var s3Options = {
   accessKeyId: process.env.S3_ACCESS_KEY,
   secretAccessKey: process.env.S3_SECRET_KEY,
   bucket: process.env.S3_BUCKET,
-  bucketLocation: process.env.S3_BUCKET_LOCATION
+  bucketLocation: process.env.S3_BUCKET_LOCATION,
+  allowedMimeTypes: ['png']
 }
 
 /**
@@ -29,7 +30,10 @@ var s3Options = {
  */
 test = beforeEach(test, function before (assert) {
   server = township(db)
-  server.add(app({staticFileDir: staticFileDir}))
+  server.add(app({
+    staticFileDir: staticFileDir,
+    allowedMimeTypes: ['png']
+  }))
   server.listen()
   mkdirp(staticFileDir)
   assert.end()
