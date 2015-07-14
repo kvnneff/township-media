@@ -12,24 +12,28 @@ var levelup = require('levelup')
 var db = levelup('db', {db: memdown})
 
 var options = {
-  uploadDir: __dirname + '/uploads'
+  uploadDir: __dirname + '/uploads',
+  allowedMimeTypes: ['png', 'jpeg', 'gif', 'mpeg', 'avi', 'ogg']
+  maxFileSize: 4000000
 }
 
 var server = township(db)
-server.add(media(db, options, server))
+server.add(media(options))
 server.listen()
 ```
 
 ## Options
 
+* `maxFileSize` - The maximum allowed file size (in bytes).  The default is `2000000` (2mb)
+* `allowedMimeTypes` - The allowed mime types for uploaded files.  [mime-types](https://github.com/jshttp/mime-types) is used to verify mime types so the following is all valid: `['json', 'markdown', '.png', 'jpeg']`.  Defaults to allowing all mime types.
+* `uploadDir` - The path to prepend to the files being saved.  When using disk storage this will look like `/assets/[uploadDir]/image.jpg`.  When using S3 this will look like `https://s3.amazonaws.com/[bucket]/[uploadDir]/image.jpg`.  The default is `uploads`.
+
 Required when using AWS S3:
 
-`uploadDir` - The path to prepend to the files being saved.  When using disk storage this will
-look like `/assets/[uploadDir]/image.jpg`.  When using S3 this will look like `https://s3.amazonaws.com/[bucket]/[uploadDir]/image.jpg`
 
-`accessKeyId` - Your AWS S3 access key id.
-`secretAccessKey` - Your AWS S3 secret access key.
-`bucket` - Your AWS S3 bucket name.
+* `accessKeyId` - Your AWS S3 access key id.
+* `secretAccessKey` - Your AWS S3 secret access key.
+* `bucket` - Your AWS S3 bucket name.
 
 ## License
 MIT
