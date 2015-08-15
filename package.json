@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/staygrimm/township-media"
+    "url": "https://github.com/kvnneff/township-media"
   },
-  "author": "River Grimm <river.grimm@gmail.com>",
+  "author": "Kevin Neff <kvnneff@gmail.com>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/staygrimm/township-media/issues"
+    "url": "https://github.com/kvnneff/township-media/issues"
   },
-  "homepage": "https://github.com/staygrimm/township-media",
+  "homepage": "https://github.com/kvnneff/township-media",
   "devDependencies": {
     "component-clone": "^0.2.2",
     "dotenv": "^1.2.0",
@@ -27,7 +27,7 @@
     "standard": "^4.4.1",
     "tap-spec": "^4.0.2",
     "tape": "^4.0.0",
-    "township": "git://github.com/staygrimm/township.git#plugins"
+    "township": "git://github.com/kvnneff/township.git#plugins"
   },
   "dependencies": {
     "JSONStream": "^1.0.4",
